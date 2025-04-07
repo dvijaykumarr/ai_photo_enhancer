@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI  photo enhanced Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        body {
+            background: #f5f7fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            padding: 18px;
+            text-align: center;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #f9f9f9;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .bot-message {
+            background: white;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .chat-input-container {
+            display: flex;
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            gap: 10px;
+        }
+        
+        #messageInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            outline: none;
+            font-size: 1rem;
+        }
+        
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .file-upload-label:hover {
+            transform: scale(1.05);
+        }
+        
+        #imageUpload {
+            display: none;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            gap: 6px;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 18px;
+            align-self: flex-start;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            width: fit-content;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #a777e3;
+            border-radius: 50%;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+        
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+        
+        .message-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin-top: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .image-wrapper {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .image-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Ninnu nuvvu kottaga choosuko mava</h1>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-container">
+            <input type="text" id="messageInput" placeholder="Type a message or upload a photo..." autocomplete="off">
+            <label for="imageUpload" class="file-upload-label" title="Upload Photo">
+                📷
+            </label>
+            <input type="file" id="imageUpload" accept="image/*">
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageInput = document.getElementById('messageInput');
+            const imageUpload = document.getElementById('imageUpload');
+            let isProcessing = false;
+
+            // Initial greeting
+            setTimeout(() => {
+                addMessage("Hello! I'm your AI photo enhancer. Upload a photo and I'll enhance it for you.", 'bot');
+            }, 800);
+
+            // Handle text messages
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && messageInput.value.trim() && !isProcessing) {
+                    const message = messageInput.value;
+                    addMessage(message, 'user');
+                    messageInput.value = '';
+                    
+                    // Simple responses for text
+                    setTimeout(() => {
+                        addMessage("I specialize in photo enhancement. Please upload an image for me to enhance!", 'bot');
+                    }, 1000);
+                }
+            });
+
+            // Handle image uploads
+            imageUpload.addEventListener('change', async function(e) {
+                if (e.target.files && e.target.files[0] && !isProcessing) {
+                    isProcessing = true;
+                    const file = e.target.files[0];
+                    
+                    // Validate file
+                    if (!validateImage(file)) {
+                        isProcessing = false;
+                        return;
+                    }
+                    
+                    // Show preview
+                    const previewUrl = URL.createObjectURL(file);
+                    addImageMessage(previewUrl, 'user', 'Original');
+                    
+                    // Show processing message
+                    const processingMsg = addMessage("Enhancing your photo...", 'bot');
+                    
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        
+                        const response = await fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Server responded with error');
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            processingMsg.remove();
+                            showComparison(data.original, data.enhanced);
+                            addMessage("Here's your enhanced photo! What do you think?", 'bot');
+                        } else {
+                            throw new Error(data.message || 'Processing failed');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        processingMsg.remove();
+                        addMessage("Sorry, I couldn't enhance your photo. Please try another image.", 'bot');
+                    } finally {
+                        isProcessing = false;
+                        e.target.value = '';
+                    }
+                }
+            });
+
+            function validateImage(file) {
+                // Check file type
+                const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    addMessage("Please upload a JPEG, PNG, or WebP image.", 'bot');
+                    return false;
+                }
+                
+                // Check file size (5MB max)
+                if (file.size > 5 * 1024 * 1024) {
+                    addMessage("Image must be smaller than 5MB.", 'bot');
+                    return false;
+                }
+                
+                return true;
+            }
+
+            function addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}-message`;
+                messageDiv.textContent = text;
+                chatMessages.appendChild(messageDiv);
+                scrollToBottom();
+                return messageDiv;
+            }
+
+            function addImageMessage(src, sender, label = '') {
+                const container = document.createElement('div');
+                container.className = `message ${sender}-message`;
+                
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'message-image';
+                img.alt = 'Uploaded image';
+                
+                container.appendChild(img);
+                
+                if (label) {
+                    const labelEl = document.createElement('div');
+                    labelEl.className = 'image-label';
+                    labelEl.textContent = label;
+                    container.appendChild(labelEl);
+                }
+                
+                chatMessages.appendChild(container);
+                scrollToBottom();
+                return container;
+            }
+
+            function showComparison(originalUrl, enhancedUrl) {
+                const container = document.createElement('div');
+                container.className = 'message bot-message comparison-container';
+                
+                // Original image
+                const originalWrapper = document.createElement('div');
+                originalWrapper.className = 'image-wrapper';
+                
+                const originalImg = document.createElement('img');
+                originalImg.src = originalUrl;
+                originalImg.className = 'message-image';
+                
+                const originalLabel = document.createElement('div');
+                originalLabel.className = 'image-label';
+                originalLabel.textContent = 'Original';
+                
+                originalWrapper.appendChild(originalImg);
+                originalWrapper.appendChild(originalLabel);
+                
+                // Enhanced image
+                const enhancedWrapper = document.createElement('div');
+                enhancedWrapper.className = 'image-wrapper';
+                
+                const enhancedImg = document.createElement('img');
+                enhancedImg.src = enhancedUrl;
+                enhancedImg.className = 'message-image';
+                
+                const enhancedLabel = document.createElement('div');
+                enhancedLabel.className = 'image-label';
+                enhancedLabel.textContent = 'Enhanced';
+                
+                enhancedWrapper.appendChild(enhancedImg);
+                enhancedWrapper.appendChild(enhancedLabel);
+                
+                container.appendChild(originalWrapper);
+                container.appendChild(enhancedWrapper);
+                
+                chatMessages.appendChild(container);
+                scrollToBottom();
+            }
+
+            function scrollToBottom() {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>
